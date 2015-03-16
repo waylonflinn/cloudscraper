@@ -1,31 +1,43 @@
 var request      = require('request').defaults({jar: true}), // Cookies should be enabled
-    UserAgent    = 'Ubuntu Chromium/34.0.1847.116 Chrome/34.0.1847.116 Safari/537.36',
-    cloudscraper = {};
+    util         = require('util'),
+    UserAgent    = 'Ubuntu Chromium/34.0.1847.116 Chrome/34.0.1847.116 Safari/537.36';
 
-/**
- * Performs get request to url with headers.
- * @param  {String}    url
- * @param  {Function}  callback    function(error, body, response) {}
- * @param  {[Object}   headers     Hash with headers, e.g. {'Referer': 'http://google.com', 'User-Agent': '...'}
- */
-cloudscraper.get = function(url, callback, headers) {
-  headers = headers || {};
 
-  if (!url || !callback) {
-    throw new Error('To perform request, define both url and callback');
-  }
+var cloudscraper = function(url, options, callback){
 
-  //If no ua is passed, add one
-  if (!headers['User-Agent']) {
-    headers['User-Agent'] = UserAgent;
-  }
+  // use the built in request.initParams method to disambiguate arguments
+  var params = request.initParams(uri, options, callback);
 
-  performRequest(url, callback, headers);
+  params.options = addUserAgent(params.options);
+
+  performRequest(params.uri, params.options, params.callback);
 };
 
+// this gives us access to the HTTP verbs as methods
+util.inherits(cloudscraper, request);
 
-function performRequest(url, callback, headers) {
-  request.get({url: url, headers: headers}, function(error, response, body) {
+
+/**
+ * Add an acceptable user agent to the header options, if none has been
+ * specified.
+ * @param {[Object]} options
+ */
+function addUserAgent(options){
+
+  options = options || {};
+
+
+  //If no user-agent is passed, add one
+  options.headers = options.headers || {};
+  if (!options.headers['User-Agent']) {
+    options.headers['User-Agent'] = UserAgent;
+  }
+
+  return options;
+}
+
+function performRequest(url, options, callback) {
+  request(url, options, function(error, response, body) {
     var validationError;
 
     if (validationError = checkForErrors(error, body)) {
